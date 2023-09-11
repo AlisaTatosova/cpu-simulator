@@ -1,4 +1,4 @@
-mov r1, 15
+mov r1, 15   
 mov r10, 16
 l1:
 print r1

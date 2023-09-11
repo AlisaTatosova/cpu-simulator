@@ -75,14 +75,14 @@ void CPU::fetch(std::ifstream& file) {
                 result = instruction + " " + op1 + " " + op2;
             }
         } else {
-            std::cout << instruction << "No such instruction\n";
+            std::cout << instruction << "No such instruction" << std::endl;
             return;
         }
 
         std::string unnecessary;
         iss >> unnecessary;
         if (unnecessary != "") {
-            std::cout << "Syntax erreor\n";
+            std::cout << "Syntax erreor" << std::endl;
             return;
         }
             
@@ -154,7 +154,6 @@ void CPU::check_operands(std::string& op1, std::string& op2, void (ALU::*fptr)(s
 
 void CPU::execute(int i) {
     auto it = ram.find(i);
-
     while (it != ram.end()) {
         const std::string& value = it -> second;
 
@@ -218,16 +217,15 @@ void CPU::execute(int i) {
         }
         
         ++it; // move to the next instruction in memory
-        
     }
 }
 
 void CPU::print(const std::string& op1) {
     bool is_register_op = is_register(op1);
     if (is_register_op) {
-        std::cout << registers[op1] << "\n";            
+        std::cout << registers[op1] << std::endl;            
     } else {
-        std::cout << op1 << "\n";
+        std::cout << op1 << std::endl;
     }
 }
 

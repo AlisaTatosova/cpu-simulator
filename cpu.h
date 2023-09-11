@@ -10,20 +10,19 @@
 #include <iostream>
 
 class CPU {
-public:   
-    char get_flag(const std::string& flag);
-    void set_flag(const std::string& flag, char code);
-    bool is_register(const std::string& op);
-    std::map<std::string, int> get_labels() const;
+public:  
+    CPU();
+    char get_flag(const std::string& flag); 
+    void set_flag(const std::string& flag, char code); 
+    bool is_register(const std::string& op); // checking is operand register or not
+    std::map<std::string, int> get_labels() const; // keeps labels with their addresses
 
 public:
-    void fetch(std::ifstream& file);
-    void execute(int i = 0);
+    void fetch(std::ifstream& file); //reads from file and saves the containment in map: map<int, string> ram, where key is address of instruction, value is instruction 
+    void execute(int i = 0); // executes instructions
     void print(const std::string& op1);
 
 public:
-    CPU();
-
     class InvalidOperandException : public std::exception {         
     private:
         std::string message;
@@ -48,14 +47,13 @@ private:
 
 private:
     //helpers
-    void name_instructions();
-    void name_registers();
-    void init_flags();
-    void check_operands(std::string& op1, std::string& op2, void (ALU::*fptr)(std::string&, const std::string&));
-    bool is_number(const std::string& str);
-    void remove_comma(std::string& op);
-    bool has_comma(const std::string& op);
+    void name_instructions(); // initialize instructions
+    void name_registers(); // initialize registers
+    void init_flags(); // initalize flags
+    void check_operands(std::string& op1, std::string& op2, void (ALU::*fptr)(std::string&, const std::string&)); //checking for the operand: operands must be regiter register or register literal
+    bool is_number(const std::string& str); // checking if string is number
+    void remove_comma(std::string& op); // removes comma
+    bool has_comma(const std::string& op); // checking if there is comma
 };
-
 
 #endif
