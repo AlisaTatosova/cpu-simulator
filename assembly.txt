@@ -1,0 +1,12 @@
+mov r1, 15
+mov r10, 16
+l1:
+print r1
+inc r1
+cmp r1, r10
+je l1
+inc r1
+dec r10
+print r1
+print r10
+end
