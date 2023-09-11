@@ -56,17 +56,16 @@ void CPU::fetch(std::ifstream& file) {
             iss >> op1 >> op2;
             labels[instruction] = eip;
             result = instruction + " " + op1 + " " + op2;
-        } else if (instruction == instructions[8] || instruction == instructions[9] || instruction == instructions[10] || instruction == instructions[11]
+        } else if (instruction == instructions[5] || instruction == instructions[6] || instruction == instructions[8] || instruction == instructions[9] || instruction == instructions[10] || instruction == instructions[11]
              || instruction == instructions[12] || instruction == instructions[13] || instruction == instructions[14] || instruction == instructions[15]) { // instructions with 1 operand
                 iss >> op1 >> op2;
                 result = instruction + " " + op1 + " " + op2;
         } else if (instruction == instructions[0] || instruction == instructions[1] || instruction == instructions[2] || instruction == instructions[3]
-             || instruction == instructions[4] || instruction == instructions[5] || instruction == instructions[6] || instruction == instructions[7]) { // instructions with 2 operands
+             || instruction == instructions[4] || instruction == instructions[7]) {
             iss >> op1;
             if (!has_comma(op1)) {
                 iss >> comma >> op2;
                 if (!has_comma(comma)) {
-                    std::cout << "Syntax error" << "\n";
                     return;
                 } else {
                     result = instruction + " " + op1 + " " + op2;
@@ -131,8 +130,6 @@ void CPU::check_operands(std::string& op1, std::string& op2, void (ALU::*fptr)(s
     }
 
     bool is_register_op2 = is_register(op2);
-
-
     if (is_register_op2) {
         std::string str1 = std::to_string(registers[op1]);
         std::string str2 = std::to_string(registers[op2]);
@@ -159,8 +156,7 @@ void CPU::execute(int i) {
     auto it = ram.find(i);
 
     while (it != ram.end()) {
-        std::cout << it->first << " " << it->second << " \n";
-        const std::string& value = it->second;
+        const std::string& value = it -> second;
 
         size_t first_space = value.find(' ');
         size_t second_space = value.find(' ', first_space + 1);
@@ -220,17 +216,7 @@ void CPU::execute(int i) {
         if (should_break) {
             break;
         }
-
-        // Print information about the executed instruction
-        std::cout << std::endl;
-        std::cout << "--------------------\n";
-        std::cout << "Instruction: " << instruction << std::endl;
-        std::cout << "Op1: " << op1 << std::endl;
-        std::cout << "Op2: " << op2 << std::endl;
-        std::cout << op1 << " value " << registers[op1] << std::endl;
-        std::cout << "--------------------\n";
-        std::cout << std::endl;
-
+        
         ++it; // move to the next instruction in memory
         
     }

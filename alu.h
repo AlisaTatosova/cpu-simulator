@@ -18,8 +18,8 @@ public:
     void sub(std::string& op1, const std::string& op2);
     void mul(std::string& op1, const std::string& op2);
     void div(std::string& op1, const std::string& op2);
-    void inc(std::string& op1, const std::string& op2);
-    void dec(std::string& op1, const std::string& op2);
+    void inc(std::string& op1, const std::string& op2 = "");
+    void dec(std::string& op1, const std::string& op2 = "");
     void cmp(std::string& op1, const std::string& op2);
 
 public:

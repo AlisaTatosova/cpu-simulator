@@ -1,6 +1,8 @@
 #ifndef CPU_H
 #define CPU_h
 
+#include "alu.h"
+
 #include <map>
 #include <string>
 #include <fstream>
@@ -8,24 +10,19 @@
 #include <iostream>
 
 class CPU {
-public:
-    CPU();
-    void mov(std::string& op1, const std::string& op2);
-    void add(std::string& op1, const std::string& op2);
-    void sub(std::string& op1, const std::string& op2);
-    void mul(std::string& op1, const std::string& op2);
-    void div(std::string& op1, const std::string& op2);
-    void inc(std::string& op1, const std::string& op2 = "");
-    void dec(std::string& op1, const std::string& op2 = "");
+public:   
+    char get_flag(const std::string& flag);
+    void set_flag(const std::string& flag, char code);
+    bool is_register(const std::string& op);
+    std::map<std::string, int> get_labels() const;
 
 public:
-    void cmp(std::string& op1, const std::string& op2) ;
-    void je(std::string& label);
-    void jne(std::string& label);
-    void jg(std::string& label);
-    void jge(std::string& label);
-    void jl(std::string& label);
-    void jle(std::string& label);
+    void fetch(std::ifstream& file);
+    void execute(int i = 0);
+    void print(const std::string& op1);
+
+public:
+    CPU();
 
     class InvalidOperandException : public std::exception {         
     private:
@@ -40,28 +37,25 @@ public:
         }
     };
 
-public:
-    void fetch(std::ifstream& file);
-    void execute(int i = 0);
-    void print(std::string& op1, const std::string& op2 = "");
-    
 private:
+    ALU alu;
     std::map<int, std::string> ram;
     std::map<std::string, int> registers; 
     std::map<int, std::string> instructions;
-    std::map<std::string, char> eflags;
+    std::map<std::string, bool> eflags;
     std::map<std::string, int> labels;
-    std::map<std::string, bool> inside_loops;
     int eip;
 
 private:
-    void init_flags();
+    //helpers
     void name_instructions();
     void name_registers();
+    void init_flags();
+    void check_operands(std::string& op1, std::string& op2, void (ALU::*fptr)(std::string&, const std::string&));
     bool is_number(const std::string& str);
     void remove_comma(std::string& op);
-    bool has_comma(std::string& op);
-    void check_operands(std::string& op1, std::string& op2, void (CPU::*fptr)(std::string&, const std::string&));
+    bool has_comma(const std::string& op);
 };
+
 
 #endif

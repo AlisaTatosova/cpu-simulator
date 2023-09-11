@@ -127,7 +127,6 @@ bool ALU::jl(std::string& label) {
                 cpu.execute(it -> second + 1);
                 return true;
             }
-
         }
     }
     return false;
@@ -145,6 +144,4 @@ bool ALU::jle(std::string& label) {
     }
     return false;
 }
-
-
 
