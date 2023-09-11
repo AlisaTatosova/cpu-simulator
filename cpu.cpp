@@ -1,270 +1,10 @@
 #include "cpu.h"
 
-CPU::CPU() : eip{0} {
+CPU::CPU() : alu(*this), eip(0) {
     name_instructions();
     name_registers();
     init_flags();
 }
-
-//fetch function reads from file and saves the containment in map: map<int, string> ram, where key is address of instruction, value is instruction 
-void CPU::fetch(std::ifstream& file) {
-    std::string line;
-    while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        std::string instruction;
-        std::string op1;
-        std::string op2;
-        std::string result = "";
-        iss >> instruction;
-
-        if (instruction[instruction.size() - 1] == ':') {
-            labels[instruction] = eip;
-            result += instruction;
-        } else if (instruction == instructions[8] || instruction == instructions[9] || instruction == instructions[10] || instruction == instructions[11]
-             || instruction == instructions[12] || instruction == instructions[13]) {
-                iss >> op1;
-                result += instruction;
-                result += " ";
-                result += op1;
-
-        } else {
-            iss >>  op1 >> op2;
-            result += instruction;
-            result += " ";
-            result += op1;
-            result += " ";
-            result += op2;
-        }
-
-        ram[eip] = result;
-        std::cout << ram[eip] << " \n";
-        ++eip;
-    }
-}
-
-void CPU::mov(std::string& op1, const std::string& op2) {
-    int num1 = std::stoi(op1);
-    int num2 = std::stoi(op2);
-    op1 = std::to_string(num2);
-}
-
-void CPU::add(std::string& op1, const std::string& op2) {
-    int num1 = std::stoi(op1);
-    int num2 = std::stoi(op2);
-    num1 += num2;
-    op1 = std::to_string(num1);
-}
-
-void CPU::sub(std::string& op1, const std::string& op2) {
-    int num1 = std::stoi(op1);
-    int num2 = std::stoi(op2);
-    num1 -= num2;
-    op1 = std::to_string(num1);
-}
-
-void CPU::mul(std::string& op1, const std::string& op2) {
-    int num1 = std::stoi(op1);
-    int num2 = std::stoi(op2);
-    num1 *= num2;
-    op1 = std::to_string(num1);
-}
-
-void CPU::div(std::string& op1, const std::string& op2) {
-    int num1 = std::stoi(op1);
-    int num2 = std::stoi(op2);
-    num1 /= num2;
-    op1 = std::to_string(num1);
-}
-
-void CPU::inc(std::string& op) {
-    int num = std::stoi(op);
-    ++num;
-    op = std::to_string(num);
-}
-
-void CPU::dec(std::string& op) {
-    int num = std::stoi(op);
-    --num;
-    op = std::to_string(num);
-}
-
-void CPU::cmp(std::string& op1, const std::string& op2) {
-    std::string tmp = op1;
-    sub(op1, op2);
-    if (std::stoi(op1) > 0) {
-        eflags["SF"] = 1;
-        eflags["ZF"] = 0;
-    } else if (std::stoi(op1) == 0) {
-        eflags["ZF"] = 1;
-        eflags["SF"] = 0;
-    } else {
-        eflags["SF"] = 0;
-        eflags["ZF"] = 0;
-    }
-    op1 = tmp;
-}
-
-
-void CPU::je(std::string& label) {
-    if (eflags["ZF"] == 1) {
-        label += ':';
-        for (auto it = labels.begin(); it != labels.end(); ++it) {
-            if (it -> first == label) {
-                execute((it -> second + 1)); // the address of jmp next instruction
-               inside_loops["inside je"] = true;
-            }
-        }
-    }
-}
-
-void CPU::jne(std::string& label) {
-    if (eflags["ZF"] == 0) {
-        label += ':';
-        for (auto it = labels.begin(); it != labels.end(); ++it) {
-            if (it -> first == label) {
-                execute(it -> second + 1);
-               inside_loops["inside jne"] = true;
-            }
-        }
-    }
-}
-
-void CPU::jg(std::string& label) {
-    if (eflags["SF"] == 1) {
-        label += ':';
-        for (auto it = labels.begin(); it != labels.end(); ++it) {
-            if (it -> first == label) {
-                execute(it -> second + 1);
-                inside_loops["inside jg"] = true;
-            }
-        }
-    }
-}
-
-//checking for the operand: operands must be regiter register or register literal
-void CPU::check_operands(std::string& op1, std::string& op2, void (CPU::*fptr)(std::string&, const std::string&)) {
-    bool op1_is_register = false;
-    for (auto it = registers.begin(); it != registers.end(); ++it) {
-        const std::string& val  = it -> first;
-        if (op1 == val) {
-            op1_is_register = true;
-        }
-
-        if (op1_is_register) {
-            break;
-        }
-    }
-
-    if (!op1_is_register) {
-        std::cout << "Left operand must not be l-value\n"; // must be handled then
-        return;
-    }
-
-    bool op2_is_register = false;
-    for (auto it = registers.begin(); it != registers.end(); ++it) {
-        const std::string& val = it -> first;
-        if (op2 == val) {
-            op2_is_register = true;
-        }
-
-        if (op2_is_register) {
-            break;
-        }
-    }
-
-    if (op2_is_register) {
-        std::string str1 = std::to_string(registers[op1]);
-        std::string str2 = std::to_string(registers[op2]);
-        if (fptr) {
-            (this ->* fptr)(str1, str2); // calling the member function pointed to by fptr
-        } else {
-            std::cout << "Unknown instruction" << std::endl;
-        }
-        registers[op1] = std::stoi(str1);
-    } else { // if literal
-        std::string str1 = std::to_string(registers[op1]);
-        if (fptr) {
-            (this ->* fptr)(str1, op2);
-        } else {
-            std::cout << "Unknown instruction" << std::endl;
-        }
-        registers[op1] = std::stoi(str1);
-    }
-}
-
-void CPU::execute(int i) {
-    auto it = ram.find(i);
-    for ( ; it != ram.end(); ++it) {
-        std::cout << it -> first << " " << it -> second << " \n";
-        const std::string& value = it -> second;
-
-        size_t first_space = value.find(' ');
-        size_t second_space = value.find(' ', first_space + 1);
-
-        std::string instruction = value.substr(0, first_space);
-        std::string op1 = value.substr(first_space + 1, second_space - first_space - 1);
-        std::string op2 = value.substr(second_space + 1);
-        if (instruction == instructions[0]) {
-            check_operands(op1, op2, mov);
-        }
-
-        if (instruction == instructions[1]) {
-            check_operands(op1, op2, add);
-        }
-
-        if (instruction == instructions[2]) {
-            check_operands(op1, op2, sub);
-        }
-
-        if (instruction == instructions[3]) {
-            check_operands(op1, op2, mul);
-        }
-
-        if (instruction == instructions[4]) {
-            check_operands(op1, op2, div);
-        }
-
-        if (instruction == instructions[7]) {
-            check_operands(op1, op2, cmp);
-        }
-
-        if (instruction == instructions[8]) {
-            je(op1);
-            if (inside_loops["inside je"] ) {
-                break;
-            }
-
-            inside_loops["inside je"] = false;
-        }
-
-        if (instruction == instructions[9]) {
-            jne(op1);
-            if (inside_loops["inside jne"] ) {
-                break;
-            }
-
-            inside_loops["inside jne"] = false;
-
-        }
-
-        if (instruction == instructions[12]) {
-            jg(op1);
-            if (inside_loops["inside jg"] ) {
-                break;
-            }
-            inside_loops["inside jg"] = false;
-
-        }
-
-        std::cout << std::endl;
-        std::cout << "Instruction: " << instruction << std::endl;
-        std::cout << "Op1: " << op1 << std::endl;
-        std::cout << "Op2: " << op2 << std::endl;
-        std::cout << "left register value " << registers[op1] << std::endl;
-        std::cout << std::endl;
-    }
-}
-
 
 void CPU::name_instructions() {
     instructions[0] = "mov";
@@ -281,6 +21,8 @@ void CPU::name_instructions() {
     instructions[11] = "jle";
     instructions[12] = "jg";
     instructions[13] = "jge";
+    instructions[14] = "print";
+    instructions[15] = "end";
 }
 
 void CPU::name_registers() {
@@ -297,8 +39,242 @@ void CPU::name_registers() {
 }
 
 void CPU::init_flags() {
-    eflags["ZF"] = 0;
-    eflags["SF"] = 0;
+    eflags["ZF"] = 0; //if == 0 FLAG ZF = 1
+    eflags["SF"] = 0; // if < 0 flag SF = 1 
+    eflags["UF"] = 0; // if > 0 flag UF = 1
 }
 
+//fetch function reads from file and saves the containment in map: map<int, string> ram, where key is address of instruction, value is instruction 
+void CPU::fetch(std::ifstream& file) {
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string instruction, op1, op2, comma, result;
+        iss >> instruction;
 
+        if (instruction[instruction.size() - 1] == ':') { // if instruction is label keep in map std::map<std::string, int> the address of label
+            iss >> op1 >> op2;
+            labels[instruction] = eip;
+            result = instruction + " " + op1 + " " + op2;
+        } else if (instruction == instructions[8] || instruction == instructions[9] || instruction == instructions[10] || instruction == instructions[11]
+             || instruction == instructions[12] || instruction == instructions[13] || instruction == instructions[14] || instruction == instructions[15]) { // instructions with 1 operand
+                iss >> op1 >> op2;
+                result = instruction + " " + op1 + " " + op2;
+        } else if (instruction == instructions[0] || instruction == instructions[1] || instruction == instructions[2] || instruction == instructions[3]
+             || instruction == instructions[4] || instruction == instructions[5] || instruction == instructions[6] || instruction == instructions[7]) { // instructions with 2 operands
+            iss >> op1;
+            if (!has_comma(op1)) {
+                iss >> comma >> op2;
+                if (!has_comma(comma)) {
+                    std::cout << "Syntax error" << "\n";
+                    return;
+                } else {
+                    result = instruction + " " + op1 + " " + op2;
+                }
+            } else {
+                iss >> op2;
+                result = instruction + " " + op1 + " " + op2;
+            }
+        } else {
+            std::cout << instruction << "No such instruction\n";
+            return;
+        }
+
+        std::string unnecessary;
+        iss >> unnecessary;
+        if (unnecessary != "") {
+            std::cout << "Syntax erreor\n";
+            return;
+        }
+            
+        ram[eip] = result;
+        ++eip;
+    }
+}
+
+bool CPU::is_register(const std::string& op) { 
+    bool op_is_register = false;
+    for (auto it = registers.begin(); it != registers.end(); ++it) {
+        const std::string& val  = it -> first;
+        if (op == val) {
+            op_is_register = true;
+        }
+
+        if (op_is_register) {
+            break;
+        }
+    }
+
+    if (!op_is_register) {
+        return false;
+    }
+    return true;
+}
+
+//checking for the operand: operands must be regiter register or register literal
+void CPU::check_operands(std::string& op1, std::string& op2, void (ALU::*fptr)(std::string&, const std::string&)) {
+    remove_comma(op1);
+    bool is_register_op1 = is_register(op1);
+    if (!is_register_op1) {
+        throw InvalidOperandException(op1);
+    }
+
+    if (op2 == "") { // the case that instruction is inc or dec, faking that it has second arg: which will be empty string, to be able to use same fptr
+        std::string str1 = std::to_string(registers[op1]);
+        if (fptr) {
+            (alu .* fptr)(str1, op2); // calling the member function pointed to by fptr
+        } else {
+            std::cout << "Unknown instruction" << std::endl;
+        }
+        registers[op1] = std::stoi(str1);
+        return;
+    }
+
+    bool is_register_op2 = is_register(op2);
+
+
+    if (is_register_op2) {
+        std::string str1 = std::to_string(registers[op1]);
+        std::string str2 = std::to_string(registers[op2]);
+        if (fptr) {
+            (alu .* fptr)(str1, str2); // calling the member function pointed to by fptr
+        } else {
+            std::cout << "Unknown instruction" << std::endl;
+        }
+        registers[op1] = std::stoi(str1);
+    } else if (is_number(op2)) { // if seond operand literal
+        std::string str1 = std::to_string(registers[op1]);
+        if (fptr) {
+            (alu .* fptr)(str1, op2);
+        } else {
+            std::cout << "Unknown instruction" << std::endl;
+        }
+        registers[op1] = std::stoi(str1);
+    } else {
+        throw InvalidOperandException(op2);
+    }
+}
+
+void CPU::execute(int i) {
+    auto it = ram.find(i);
+
+    while (it != ram.end()) {
+        std::cout << it->first << " " << it->second << " \n";
+        const std::string& value = it->second;
+
+        size_t first_space = value.find(' ');
+        size_t second_space = value.find(' ', first_space + 1);
+
+        std::string instruction = value.substr(0, first_space);
+        std::string op1 = value.substr(first_space + 1, second_space - first_space - 1);
+        std::string op2 = value.substr(second_space + 1);
+
+        bool should_break = false; // Flag to indicate whether to break execution
+
+        if (instruction == instructions[0]) { 
+            check_operands(op1, op2, ALU::mov);
+        } else if (instruction == instructions[1]) { 
+            check_operands(op1, op2, ALU::add);
+        } else if (instruction == instructions[2]) { 
+            check_operands(op1, op2, ALU::sub);
+        } else if (instruction == instructions[3]) { 
+            check_operands(op1, op2, ALU::mul);
+        } else if (instruction == instructions[4]) { 
+            check_operands(op1, op2, ALU::div);
+        } else if (instruction == instructions[5]) { 
+            check_operands(op1, op2, ALU::inc);
+        } else if (instruction == instructions[6]) { 
+            check_operands(op1, op2, ALU::dec);
+        } else if (instruction == instructions[7]) { 
+            check_operands(op1, op2, ALU::cmp);
+        } else if (instruction == instructions[8]) { 
+            if (alu.je(op1)) {
+                should_break = true;
+            } 
+        } else if (instruction == instructions[9]) { 
+            if (alu.jne(op1)) {
+                should_break = true;
+            } 
+        } else if (instruction == instructions[10]) { 
+            if (alu.jl(op1)) {
+                should_break = true;
+            } 
+        } else if (instruction == instructions[11]) {\
+            if (alu.jle(op1)) {
+                should_break = true;
+            } 
+        } else if (instruction == instructions[12]) { 
+            if (alu.jg(op1)) {
+                should_break = true;
+            } 
+        } else if (instruction == instructions[13]) { 
+            if (alu.jge(op1)) {
+                should_break = true;
+            } 
+        } else if (instruction == instructions[14]) { 
+            print(op1);
+        } else if (instruction == instructions[15]) { // Exit instruction
+            break;
+        }
+
+        if (should_break) {
+            break;
+        }
+
+        // Print information about the executed instruction
+        std::cout << std::endl;
+        std::cout << "--------------------\n";
+        std::cout << "Instruction: " << instruction << std::endl;
+        std::cout << "Op1: " << op1 << std::endl;
+        std::cout << "Op2: " << op2 << std::endl;
+        std::cout << op1 << " value " << registers[op1] << std::endl;
+        std::cout << "--------------------\n";
+        std::cout << std::endl;
+
+        ++it; // move to the next instruction in memory
+        
+    }
+}
+
+void CPU::print(const std::string& op1) {
+    bool is_register_op = is_register(op1);
+    if (is_register_op) {
+        std::cout << registers[op1] << "\n";            
+    } else {
+        std::cout << op1 << "\n";
+    }
+}
+
+char CPU::get_flag(const std::string& flag) {
+    return eflags[flag];
+}
+
+void CPU::set_flag(const std::string& flag, char code) {
+    eflags[flag] = code;
+}
+
+bool CPU::is_number(const std::string& str) {
+    for (char c : str) {
+        if (!std::isdigit(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::map<std::string, int> CPU::get_labels() const {
+    return labels;
+}
+
+void CPU::remove_comma(std::string& op) {
+    if (op[op.size() - 1] == ',') {
+        op.pop_back();
+    }
+}
+
+bool CPU::has_comma(const std::string& op) {
+    if (op[op.size() - 1] == ',') {
+        return true;
+    }
+    return false;
+}
